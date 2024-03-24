@@ -1,4 +1,85 @@
+require('dotenv').config();
 
+const Sequelize = require(`sequelize`)
+
+const {CONNECTION_STRING} = process.env
+
+const sequelize = new Sequelize(CONNECTION_STRING, {dialect: `postgres`})
+
+const controller = {
+
+  getCountries: (req, res) => {
+    sequelize.query("SELECT * FROM countries")
+      .then((dbRes) => {
+        res.status(200).send(dbRes[0]); 
+      })
+      .catch((error) => {
+        console.error('Error fetching countries:', error);
+        res.status(500).send('An error occurred while fetching countries');
+      });
+  }
+
+  createCity: (req, res) => {
+    const { name, rating, countryId } = req.body;
+
+    sequelize.query(
+      "INSERT INTO cities (name, rating, country_id) VALUES (:name, :rating, :countryId)",
+      { 
+        replacements: { name, rating, countryId }, 
+        type: sequelize.QueryTypes.INSERT
+      }
+    )
+    .then((dbRes) => {
+      res.status(200).send(dbRes[0]);
+    })
+    .catch((error) => {
+      console.error('Error creating city:', error);
+      res.status(500).send('An error occurred while creating the city');
+    });
+  }
+
+  getCities: (req, res) => {
+    sequelize.query(
+      `SELECT cities.city_id, cities.name AS city, cities.rating, 
+              countries.country_id, countries.name AS country 
+       FROM cities 
+       JOIN countries ON cities.country_id = countries.country_id`,
+      { type: sequelize.QueryTypes.SELECT }
+    )
+    .then((dbRes) => {
+      res.status(200).send(dbRes);
+    })
+    .catch((error) => {
+      console.error('Error fetching cities and countries:', error);
+      res.status(500).send('An error occurred while fetching data');
+    });
+  }
+
+  deleteCity: (req, res) => {
+    const { id } = req.params;
+
+    sequelize.query(
+      "DELETE FROM cities WHERE city_id = :id",
+      { 
+        replacements: { id }, 
+        type: sequelize.QueryTypes.DELETE
+      }
+    )
+    .then((dbRes) => {
+      res.status(200).send({ message: 'City deleted successfully' });
+    })
+    .catch((error) => {
+      console.error('Error deleting city:', error);
+      res.status(500).send('An error occurred while deleting the city');
+    });
+  }
+
+};
+
+
+module.exports = controller;
+
+// i think i did the correctly but i had so much trouble with postman connecting that i couldnt verify it
 
 module.exports = {
     seed: (req, res) => {
@@ -12,6 +93,16 @@ module.exports = {
             );
 
             *****YOUR CODE HERE*****
+
+            CREATE TABLE cities (
+                city_id SERIAL PRIMARY KEY,
+                name VARCHAR(255),
+                rating INTEGER,
+                country_id INTEGER,
+                CONSTRAINT fk_country
+                    FOREIGN KEY(country_id) 
+                    REFERENCES countries(country_id)
+            );
 
             insert into countries (name)
             values ('Afghanistan'),
